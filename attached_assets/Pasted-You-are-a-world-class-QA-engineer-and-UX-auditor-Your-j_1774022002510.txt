@@ -1,0 +1,192 @@
+You are a world-class QA engineer and UX auditor. Your job is to rigorously test 
+the Blog CMS artifact that has been built. Execute ALL of the following test cases 
+systematically and report results in a structured format.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ HOW TO REPORT RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For each test, report:
+  ✅ PASS  — works exactly as expected
+  ⚠️ PARTIAL — works but with minor issues (describe them)
+  ❌ FAIL  — broken, missing, or throws an error (describe exactly what went wrong)
+
+Group results by module. At the end, output:
+  - A scorecard (X/Y tests passed per module)
+  - A prioritized bug list (P1 Critical → P2 Major → P3 Minor)
+  - 3 UX improvement recommendations
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 1 — NAVIGATION & LAYOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-N01: Click every sidebar nav item — does each load the correct module?
+TC-N02: Does the active sidebar item highlight correctly on each page?
+TC-N03: Resize to mobile width — does the sidebar collapse/toggle correctly?
+TC-N04: Does the hamburger menu open and close the sidebar?
+TC-N05: Is the top header visible and persistent across all pages?
+TC-N06: Does the user avatar dropdown open and show Profile/Logout options?
+TC-N07: Are page titles in the header updated per active module?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 2 — DASHBOARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-D01: Do all summary cards display non-zero, realistic numbers?
+TC-D02: Does the stat for "Published" match the actual count in the Post List?
+TC-D03: Does "Drafts" count match actual draft posts?
+TC-D04: Does the recent activity feed show at least 3 entries?
+TC-D05: Do quick-action buttons (New Post, etc.) navigate to the correct modules?
+TC-D06: After creating a new post, does the Dashboard stat update?
+TC-D07: After deleting a post, does the Dashboard stat decrease?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 3 — POST EDITOR (Create)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-E01: Click "New Post" — does a blank editor open?
+TC-E02: Type a title — does the slug auto-generate from it?
+TC-E03: Edit the slug manually — does it stay edited (not re-auto-generate)?
+TC-E04: Type body content — does word count update live?
+TC-E05: Does read-time estimate update as you type?
+TC-E06: Does the character count on the title field work?
+TC-E07: Test every toolbar button (Bold, Italic, H1, H2, H3, Quote, Code, 
+         Bullet List, Numbered List, Link, Image, Undo, Redo)
+TC-E08: Add tags by typing and pressing Enter — do they appear as pills?
+TC-E09: Remove a tag by clicking × — does it disappear?
+TC-E10: Select a category from the dropdown — does it save correctly?
+TC-E11: Drag and drop (or click) the featured image zone — does a preview appear?
+TC-E12: Fill in SEO fields (meta title, meta description) — do they save?
+TC-E13: Set status to "Scheduled" and pick a future date — does it save?
+TC-E14: Click "Save Draft" — does a success toast appear?
+TC-E15: Click "Publish" — does a confirmation modal appear before publishing?
+TC-E16: Confirm publish — does the post appear in the Post List as "Published"?
+TC-E17: Try to publish with an empty title — is there a validation error?
+TC-E18: Try to publish with empty body — is there a validation error?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 4 — POST EDITOR (Edit)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-EE01: Click "Edit" on an existing post — does the editor pre-fill all fields?
+TC-EE02: Change the title — does the post list reflect the new title after save?
+TC-EE03: Change status from Published → Draft — does the badge update?
+TC-EE04: Add a new tag to an existing post and save — does it persist?
+TC-EE05: Remove a category and save — is it removed correctly?
+TC-EE06: Click "Duplicate" on a post — does a copy appear in the list as a Draft?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 5 — POST LIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-L01: Does the list load with all seeded posts visible?
+TC-L02: Does clicking the "Published" filter tab show only published posts?
+TC-L03: Does clicking "Drafts" tab show only draft posts?
+TC-L04: Does clicking "Scheduled" tab show only scheduled posts?
+TC-L05: Does clicking "Archived" tab show only archived posts?
+TC-L06: Does "All" tab show every post?
+TC-L07: Type in the search bar — does the list filter live by title?
+TC-L08: Clear the search — does the full list restore?
+TC-L09: Click a column header (e.g. Date) — does it sort ascending?
+TC-L10: Click the same header again — does it sort descending?
+TC-L11: Select 3 posts with checkboxes — do bulk action buttons appear?
+TC-L12: Bulk action "Publish" on 3 drafts — do all 3 become Published?
+TC-L13: Bulk action "Delete" — does a confirmation appear before deletion?
+TC-L14: Confirm bulk delete — are all selected posts removed?
+TC-L15: With 12+ posts, does pagination appear and work correctly?
+TC-L16: Navigate to page 2 — does the list show the next set of posts?
+TC-L17: Delete a single post via row action — does a toast with "Undo" appear?
+TC-L18: Click "Undo" on the delete toast — does the post reappear?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 6 — MEDIA LIBRARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-M01: Does the media grid load with seeded images?
+TC-M02: Are image name, file size, and upload date visible on each item?
+TC-M03: Click an image — does it highlight/select and show a "Copy URL" option?
+TC-M04: Click "Copy URL" — does a success toast appear?
+TC-M05: Click the Upload button — does it simulate adding a new image to the grid?
+TC-M06: Delete a media item — does a confirmation dialog appear?
+TC-M07: Confirm delete — is the image removed from the grid?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 7 — CATEGORIES & TAGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-C01: Does the categories table load with seeded data and post counts?
+TC-C02: Add a new category — does it appear in the table immediately?
+TC-C03: Does the new category's slug auto-generate from its name?
+TC-C04: Edit a category inline — does the name update on save?
+TC-C05: Delete a category — does a confirmation appear, then it's removed?
+TC-C06: Does the new category appear in the Post Editor's category dropdown?
+TC-C07: Repeat TC-C01 through TC-C06 for the Tags section.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 8 — COMMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-CM01: Does the comments table load with seeded data and correct statuses?
+TC-CM02: Click "Approve" on a Pending comment — does badge change to Approved?
+TC-CM03: Click "Spam" on a comment — does badge change to Spam?
+TC-CM04: Does the "Pending" filter tab show only pending comments?
+TC-CM05: Does the "Approved" tab show only approved comments?
+TC-CM06: Does the "Spam" tab show only spam comments?
+TC-CM07: Bulk select 3 comments and delete — does confirmation appear?
+TC-CM08: Confirm bulk delete — are all 3 removed from the list?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODULE 9 — SETTINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-S01: Do all settings fields load with default/pre-filled values?
+TC-S02: Change the blog title and click Save — does a success toast appear?
+TC-S03: Navigate away and return to Settings — do the saved values persist?
+TC-S04: Toggle "Allow Comments" off and save — does the toggle stay off on return?
+TC-S05: Change posts-per-page to 5 and save — does the Post List paginate at 5?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ CROSS-CUTTING CONCERNS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-X01: Do all toast notifications auto-dismiss after ~3 seconds?
+TC-X02: Do all confirmation modals have both "Confirm" and "Cancel" buttons?
+TC-X03: Does "Cancel" on any modal close it without making changes?
+TC-X04: Does the skeleton shimmer appear briefly on first load of each module?
+TC-X05: Are all status badges color-coded consistently across all modules?
+TC-X06: Tab through the entire editor form — is keyboard navigation logical?
+TC-X07: Are all icon buttons labeled with aria-label attributes?
+TC-X08: Does the app render without console errors on initial load?
+TC-X09: Is the design consistent (fonts, colors, spacing) across all modules?
+TC-X10: Does the app remain functional after 10+ consecutive CRUD operations?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ EDGE CASES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TC-EG01: Create a post with a 200-character title — does the UI handle overflow?
+TC-EG02: Add 20 tags to a single post — does the tag container scroll/wrap?
+TC-EG03: Delete ALL posts — does the Post List show an empty state message?
+TC-EG04: Delete ALL media — does the Media Library show an empty state?
+TC-EG05: Search for a term that matches no posts — is an empty state shown?
+TC-EG06: Rapidly click "Save Draft" 5 times — do duplicate toasts stack or 
+          debounce correctly?
+TC-EG07: Create a category with the same name as an existing one — 
+          is a duplicate warning shown?
+TC-EG08: Set a post's publish date to the past with "Scheduled" status — 
+          is there a validation warning?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FINAL DELIVERABLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Output a full test report with:
+
+1. Results table per module (TC ID | Test Name | Result | Notes)
+2. Overall scorecard: X / 75 tests passed
+3. Bug registry:
+   - P1 Critical (blocks core workflow)
+   - P2 Major (degrades experience significantly)  
+   - P3 Minor (cosmetic or edge case)
+4. Top 3 UX improvement recommendations with rationale
+5. A "ready for production" verdict: YES / NO / CONDITIONAL
