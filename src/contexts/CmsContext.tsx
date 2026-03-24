@@ -1,7 +1,6 @@
 import { createContext, useContext, useReducer, useCallback, useMemo, ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Types
 export interface CmsPost {
   id: string;
   title: string;
@@ -108,110 +107,35 @@ type CmsAction =
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "ADD_ACTIVITY"; payload: ActivityItem };
 
-const uid = () => crypto.randomUUID();
+const SETTINGS_KEY = "cms_settings";
 
-// Seed data
-const seedPosts: CmsPost[] = [
-  { id: uid(), title: "The Future of AI in Web Development", slug: "future-ai-web-dev", excerpt: "How artificial intelligence is reshaping the way we build websites.", content: "<p>Artificial intelligence is rapidly transforming web development...</p>", category: "Technology", tags: ["AI", "Web Dev"], coverImage: "https://picsum.photos/seed/1/800/400", status: "published", author: "Sarah Chen", views: 4521, publishDate: "2026-03-15", createdAt: "2026-03-14", metaTitle: "", metaDescription: "", ogImage: "", featured: true },
-  { id: uid(), title: "Design Systems That Scale", slug: "design-systems-scale", excerpt: "Building design systems that grow with your organization.", content: "<p>Design systems are the backbone of consistent UI...</p>", category: "Design", tags: ["Design Systems", "UI/UX"], coverImage: "https://picsum.photos/seed/2/800/400", status: "published", author: "Marcus Johnson", views: 3102, publishDate: "2026-03-12", createdAt: "2026-03-11", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Remote Work in Southeast Asia", slug: "remote-work-sea", excerpt: "Best cities for digital nomads in Southeast Asia.", content: "<p>Southeast Asia continues to attract remote workers...</p>", category: "Travel", tags: ["Digital Nomad", "Remote Work"], coverImage: "https://picsum.photos/seed/3/800/400", status: "published", author: "Lina Patel", views: 7893, publishDate: "2026-03-10", createdAt: "2026-03-09", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Mindful Productivity Techniques", slug: "mindful-productivity", excerpt: "Techniques to boost productivity without burning out.", content: "<p>In an age of constant notifications...</p>", category: "Lifestyle", tags: ["Productivity", "Wellness"], coverImage: "https://picsum.photos/seed/4/800/400", status: "published", author: "Sarah Chen", views: 2456, publishDate: "2026-03-08", createdAt: "2026-03-07", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "TypeScript 6.0 Deep Dive", slug: "typescript-6-deep-dive", excerpt: "Everything new in TypeScript 6.0 and how to use it.", content: "<p>TypeScript 6.0 brings pattern matching...</p>", category: "Technology", tags: ["TypeScript", "Programming"], coverImage: "https://picsum.photos/seed/5/800/400", status: "draft", author: "Marcus Johnson", views: 0, publishDate: "", createdAt: "2026-03-18", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Color Theory for Developers", slug: "color-theory-devs", excerpt: "Understanding color theory to create better interfaces.", content: "<p>Color theory isn't just for designers...</p>", category: "Design", tags: ["Color Theory", "CSS"], coverImage: "https://picsum.photos/seed/6/800/400", status: "draft", author: "Lina Patel", views: 0, publishDate: "", createdAt: "2026-03-17", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Hidden Gems of Portugal", slug: "hidden-gems-portugal", excerpt: "Off-the-beaten-path destinations in Portugal.", content: "<p>Portugal has so much more than Lisbon...</p>", category: "Travel", tags: ["Portugal", "Europe"], coverImage: "https://picsum.photos/seed/7/800/400", status: "scheduled", author: "Sarah Chen", views: 0, publishDate: "2026-04-01", createdAt: "2026-03-16", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Building Healthy Morning Routines", slug: "healthy-morning-routines", excerpt: "How to design a morning routine that energizes you.", content: "<p>Your morning sets the tone...</p>", category: "Lifestyle", tags: ["Morning Routine", "Health"], coverImage: "https://picsum.photos/seed/8/800/400", status: "published", author: "Marcus Johnson", views: 5678, publishDate: "2026-03-05", createdAt: "2026-03-04", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "React Server Components Explained", slug: "react-server-components", excerpt: "A practical guide to React Server Components.", content: "<p>React Server Components change the paradigm...</p>", category: "Technology", tags: ["React", "Web Dev"], coverImage: "https://picsum.photos/seed/9/800/400", status: "published", author: "Lina Patel", views: 9234, publishDate: "2026-03-03", createdAt: "2026-03-02", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Minimalism in UI Design", slug: "minimalism-ui", excerpt: "Why less is more in modern interface design.", content: "<p>Minimalism is not about removing elements...</p>", category: "Design", tags: ["Minimalism", "UI/UX"], coverImage: "https://picsum.photos/seed/10/800/400", status: "archived", author: "Sarah Chen", views: 1234, publishDate: "2026-02-20", createdAt: "2026-02-19", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Bali Beyond the Tourist Trail", slug: "bali-beyond-tourist", excerpt: "Discovering authentic Bali away from the crowds.", content: "<p>Bali's tourist hotspots are well known...</p>", category: "Travel", tags: ["Bali", "Indonesia"], coverImage: "https://picsum.photos/seed/11/800/400", status: "published", author: "Marcus Johnson", views: 6789, publishDate: "2026-02-28", createdAt: "2026-02-27", metaTitle: "", metaDescription: "", ogImage: "" },
-  { id: uid(), title: "Digital Detox Guide", slug: "digital-detox-guide", excerpt: "A complete guide to reducing screen time.", content: "<p>In our hyper-connected world...</p>", category: "Lifestyle", tags: ["Digital Detox", "Wellness"], coverImage: "https://picsum.photos/seed/12/800/400", status: "draft", author: "Lina Patel", views: 0, publishDate: "", createdAt: "2026-03-19", metaTitle: "", metaDescription: "", ogImage: "" },
-];
-
-const seedMedia: CmsMedia[] = Array.from({ length: 8 }, (_, i) => ({
-  id: uid(),
-  name: `image-${i + 1}.jpg`,
-  url: `https://picsum.photos/seed/${i + 20}/600/400`,
-  size: `${(Math.random() * 3 + 0.5).toFixed(1)} MB`,
-  date: `2026-03-${String(19 - i).padStart(2, "0")}`,
-}));
-
-const seedCategories: CmsCategory[] = [
-  { id: uid(), name: "Technology", slug: "technology", postCount: 3 },
-  { id: uid(), name: "Design", slug: "design", postCount: 3 },
-  { id: uid(), name: "Travel", slug: "travel", postCount: 3 },
-  { id: uid(), name: "Lifestyle", slug: "lifestyle", postCount: 3 },
-  { id: uid(), name: "Business", slug: "business", postCount: 0 },
-  { id: uid(), name: "Health", slug: "health", postCount: 0 },
-];
-
-const seedTags: CmsTag[] = [
-  { id: uid(), name: "AI", slug: "ai", postCount: 1 },
-  { id: uid(), name: "Web Dev", slug: "web-dev", postCount: 2 },
-  { id: uid(), name: "Design Systems", slug: "design-systems", postCount: 1 },
-  { id: uid(), name: "UI/UX", slug: "ui-ux", postCount: 2 },
-  { id: uid(), name: "Digital Nomad", slug: "digital-nomad", postCount: 1 },
-  { id: uid(), name: "Remote Work", slug: "remote-work", postCount: 1 },
-  { id: uid(), name: "Productivity", slug: "productivity", postCount: 1 },
-  { id: uid(), name: "TypeScript", slug: "typescript", postCount: 1 },
-  { id: uid(), name: "React", slug: "react", postCount: 1 },
-  { id: uid(), name: "Wellness", slug: "wellness", postCount: 2 },
-];
-
-const commentAuthors = ["Alex Rivera", "Jordan Kim", "Taylor Smith", "Casey Liu", "Morgan Brown", "Riley Wilson", "Jamie Park"];
-const commentTexts = [
-  "Great article! Really learned a lot from this.",
-  "I disagree with some points but overall a solid read.",
-  "Can you write a follow-up on this topic?",
-  "This changed my perspective completely.",
-  "Bookmarked this for later reference. Thanks!",
-  "The code examples were super helpful.",
-  "Not sure about the conclusion but interesting take.",
-  "Please cover more advanced topics next time.",
-  "Shared this with my team, they loved it!",
-  "Is there a video version of this?",
-  "Buy cheap supplements at spam-link.com!!!",
-  "Visit my website for amazing deals!!!",
-  "I've been waiting for an article like this.",
-  "Well-researched and beautifully written.",
-];
-
-const seedComments: CmsComment[] = commentTexts.map((content, i) => ({
-  id: uid(),
-  author: commentAuthors[i % commentAuthors.length],
-  email: `${commentAuthors[i % commentAuthors.length].toLowerCase().replace(" ", ".")}@example.com`,
-  content,
-  postTitle: seedPosts[i % seedPosts.length].title,
-  postId: seedPosts[i % seedPosts.length].id,
-  date: `2026-03-${String(19 - (i % 14)).padStart(2, "0")}`,
-  status: i >= 10 && i <= 11 ? "spam" : i >= 6 && i <= 9 ? "pending" : "approved" as CmsComment["status"],
-}));
-
-const seedSettings: CmsSettings = {
-  blogTitle: "TechVerse Blog",
+const defaultSettings: CmsSettings = {
+  blogTitle: "My Kind of Copy",
   tagline: "Where technology meets creativity",
-  description: "A modern blog covering technology, design, travel, and lifestyle.",
+  description: "A modern blog covering technology, design, and opportunities.",
   postsPerPage: 10,
   allowComments: true,
-  moderateComments: true,
-  defaultMetaTitle: "TechVerse Blog",
-  defaultMetaDescription: "Explore the latest in tech, design, and lifestyle.",
+  moderateComments: false,
+  defaultMetaTitle: "My Kind of Copy",
+  defaultMetaDescription: "Explore the latest in tech, design, and opportunities.",
 };
 
-const seedActivity: ActivityItem[] = [
-  { id: uid(), action: "Published", target: "The Future of AI in Web Development", time: "2 hours ago" },
-  { id: uid(), action: "New comment on", target: "Design Systems That Scale", time: "4 hours ago" },
-  { id: uid(), action: "Updated", target: "Remote Work in Southeast Asia", time: "Yesterday" },
-  { id: uid(), action: "New draft", target: "TypeScript 6.0 Deep Dive", time: "Yesterday" },
-  { id: uid(), action: "Deleted media", target: "old-banner.png", time: "2 days ago" },
-];
+const loadSettings = (): CmsSettings => {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (saved) return { ...defaultSettings, ...JSON.parse(saved) };
+  } catch {}
+  return defaultSettings;
+};
 
 const initialState: CmsState = {
-  posts: [], // Start empty, fetch from Supabase
-  media: seedMedia,
-  categories: seedCategories,
-  tags: seedTags,
-  comments: seedComments,
-  settings: seedSettings,
-  activity: seedActivity,
+  posts: [],
+  media: [],
+  categories: [],
+  tags: [],
+  comments: [],
+  settings: loadSettings(),
+  activity: [],
 };
 
 function cmsReducer(state: CmsState, action: CmsAction): CmsState {
@@ -276,34 +200,27 @@ export function CmsProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cmsReducer, initialState);
 
   const fetchPosts = useCallback(async () => {
-    // 1. Fetch articles
     const { data: articlesData, error: articlesError } = await supabase
       .from("articles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (articlesError) {
-      console.error("Error fetching CMS posts:", articlesError);
-      return;
-    }
+    if (articlesError || !articlesData) return;
 
-    if (!articlesData) return;
-
-    // 2. Fetch authors
-    const authorIds = [...new Set(articlesData.map(a => a.author_id).filter(Boolean))];
+    const authorIds = [...new Set(articlesData.map((a: any) => a.author_id).filter(Boolean))];
     let profileMap: Record<string, any> = {};
-    
+
     if (authorIds.length > 0) {
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("user_id, display_name, username")
         .in("user_id", authorIds);
-        
+
       if (profilesData) {
-        profileMap = profilesData.reduce((acc, profile) => {
+        profileMap = profilesData.reduce((acc: Record<string, any>, profile: any) => {
           acc[profile.user_id] = profile;
           return acc;
-        }, {} as Record<string, any>);
+        }, {});
       }
     }
 
@@ -316,16 +233,17 @@ export function CmsProvider({ children }: { children: ReactNode }) {
       category: p.category,
       tags: p.tags || [],
       coverImage: p.cover_image || "",
-      status: (p.status as any) || "draft",
+      // Use status column if it exists (after migration), fall back to published boolean
+      status: (p.status as CmsPost["status"]) ?? (p.published ? "published" : "draft"),
       author: profileMap[p.author_id]?.display_name || profileMap[p.author_id]?.username || "Unknown",
       authorId: p.author_id,
-      views: 0, // Views table not yet implemented
+      views: 0,
       publishDate: p.created_at,
       createdAt: p.created_at,
       metaTitle: p.title,
       metaDescription: p.excerpt || "",
       ogImage: p.cover_image || "",
-      featured: p.is_featured || false
+      featured: p.is_featured ?? false,
     }));
 
     dispatch({ type: "SET_POSTS", payload: mappedPosts });
@@ -336,14 +254,17 @@ export function CmsProvider({ children }: { children: ReactNode }) {
   }, [fetchPosts]);
 
   const addActivity = useCallback((action: string, target: string) => {
-    dispatch({ type: "ADD_ACTIVITY", payload: { id: crypto.randomUUID(), action, target, time: "Just now" } });
+    dispatch({
+      type: "ADD_ACTIVITY",
+      payload: { id: crypto.randomUUID(), action, target, time: "Just now" },
+    });
   }, []);
 
-  const value = useMemo(() => ({ 
-    state, 
-    dispatch, 
-    addActivity, 
-    refreshPosts: fetchPosts 
+  const value = useMemo(() => ({
+    state,
+    dispatch,
+    addActivity,
+    refreshPosts: fetchPosts,
   }), [state, addActivity, fetchPosts]);
 
   return <CmsContext.Provider value={value}>{children}</CmsContext.Provider>;

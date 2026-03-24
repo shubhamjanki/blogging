@@ -86,7 +86,10 @@ export default function CmsPostList() {
       if (error) { toast.error(error.message); return; }
       toast.success(`${ids.length} posts deleted`);
     } else {
-      const { error } = await supabase.from("articles").update({ status: action }).in("id", ids);
+      const { error } = await supabase
+        .from("articles")
+        .update({ published: action === "published", status: action })
+        .in("id", ids);
       if (error) { toast.error(error.message); return; }
       toast.success(`${ids.length} posts set to ${action}`);
     }
@@ -113,6 +116,7 @@ export default function CmsPostList() {
       title: `${post.title} (Copy)`,
       slug: `${post.slug}-copy-${Math.floor(Math.random() * 1000)}`,
       status: "draft",
+      published: false,
       content: post.content,
       excerpt: post.excerpt,
       category: post.category,

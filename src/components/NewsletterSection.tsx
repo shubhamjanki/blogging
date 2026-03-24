@@ -5,12 +5,14 @@ import ScrollReveal from "@/components/ScrollReveal";
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    toast.success("Thanks for subscribing!");
+    setSubmitted(true);
     setEmail("");
+    toast.success("You're on the list — we'll be in touch!");
   };
 
   return (
@@ -25,22 +27,28 @@ const NewsletterSection = () => {
             <p className="text-muted-foreground text-sm md:text-base max-w-md mx-auto mb-6">
               Get the latest tech news, opportunities, and tutorials delivered to your inbox every week.
             </p>
-            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="flex-1 bg-muted/60 backdrop-blur-sm rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground border border-border/30 outline-none focus:ring-2 focus:ring-primary/30"
-                required
-              />
-              <button
-                type="submit"
-                className="lux-button flex items-center justify-center gap-2 bg-foreground text-background px-6 py-3 rounded-xl text-sm font-medium"
-              >
-                <Send className="w-4 h-4" /> Subscribe
-              </button>
-            </form>
+            {submitted ? (
+              <p className="text-primary font-medium text-sm">
+                Thanks for subscribing! We'll reach out soon.
+              </p>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="flex-1 bg-muted/60 backdrop-blur-sm rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground border border-border/30 outline-none focus:ring-2 focus:ring-primary/30"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="lux-button flex items-center justify-center gap-2 bg-foreground text-background px-6 py-3 rounded-xl text-sm font-medium"
+                >
+                  <Send className="w-4 h-4" /> Subscribe
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </ScrollReveal>

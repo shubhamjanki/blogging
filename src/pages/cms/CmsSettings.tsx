@@ -1,17 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCms } from "@/contexts/CmsContext";
 import { toast } from "sonner";
 
+const SETTINGS_KEY = "cms_settings";
 const cardStyle = { background: "#1a1d27", border: "1px solid #2a2d3e" };
 const inputStyle = "w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500/30";
 const inputBg = { background: "#0f1117", border: "1px solid #2a2d3e", color: "#f1f0eb" };
 
 export default function CmsSettings() {
   const { state, dispatch } = useCms();
-  const [s, setS] = useState({ ...state.settings });
+  const [s, setS] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SETTINGS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { ...state.settings };
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SETTINGS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setS(parsed);
+        dispatch({ type: "UPDATE_SETTINGS", payload: parsed });
+      }
+    } catch {}
+  }, []);
 
   const handleSave = () => {
     dispatch({ type: "UPDATE_SETTINGS", payload: s });
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    } catch {}
     toast.success("Settings saved!");
   };
 

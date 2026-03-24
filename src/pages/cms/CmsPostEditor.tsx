@@ -22,6 +22,7 @@ export default function CmsPostEditor() {
 
   const existing = id ? state.posts.find(p => p.id === id) : null;
 
+  const [initialized, setInitialized] = useState(!id);
   const [title, setTitle] = useState(existing?.title || "");
   const [slug, setSlug] = useState(existing?.slug || "");
   const [excerpt, setExcerpt] = useState(existing?.excerpt || "");
@@ -37,6 +38,31 @@ export default function CmsPostEditor() {
   const [ogImage, setOgImage] = useState(existing?.ogImage || "");
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [seoOpen, setSeoOpen] = useState(false);
+
+  // Sync form when the post loads from Supabase (direct navigation to edit URL)
+  useEffect(() => {
+    if (existing && !initialized) {
+      setTitle(existing.title);
+      setSlug(existing.slug);
+      setExcerpt(existing.excerpt);
+      setContent(existing.content);
+      setCategory(existing.category);
+      setTags(existing.tags);
+      setCoverImage(existing.coverImage);
+      setStatus(existing.status);
+      setPublishDate(existing.publishDate);
+      setMetaTitle(existing.metaTitle);
+      setMetaDesc(existing.metaDescription);
+      setOgImage(existing.ogImage);
+      setInitialized(true);
+    }
+  }, [existing, initialized]);
+
+  // Derive unique categories from all posts
+  const allCategories = useMemo(() => {
+    const set = new Set(state.posts.map(p => p.category).filter(Boolean));
+    return Array.from(set).sort();
+  }, [state.posts]);
 
   useEffect(() => {
     if (!existing && title) setSlug(generateSlug(title));
@@ -99,6 +125,8 @@ export default function CmsPostEditor() {
       category: category || "Uncategorized",
       tags,
       cover_image: coverImage,
+      // published boolean for backward compat; status column used after migration
+      published: finalStatus === "published",
       status: finalStatus,
       author_id: user.id,
       read_time_minutes: readTime,
@@ -245,7 +273,7 @@ export default function CmsPostEditor() {
             <label className="text-xs font-medium mb-1 block" style={{ color: "#9ca3af" }}>Category</label>
             <select value={category} onChange={e => setCategory(e.target.value)} className={inputStyle} style={inputBg}>
               <option value="">Select category</option>
-              {state.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 

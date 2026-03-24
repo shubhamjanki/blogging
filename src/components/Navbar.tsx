@@ -121,7 +121,7 @@ const Navbar = () => {
     const { data } = await supabase
       .from("articles")
       .select("id, title, slug, category, excerpt")
-      .eq("status", "published")
+      .eq("published", true)
       .or(`title.ilike."%${safeQuery}%",excerpt.ilike."%${safeQuery}%",category.ilike."%${safeQuery}%"`)
       .limit(8);
     setSearchResults(data || []);

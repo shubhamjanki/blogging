@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, User, Share2, Heart, MessageCircle, Send, ThumbsUp, Facebook, LinkIcon, Bookmark, UserPlus, UserCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, User, Share2, Heart, MessageCircle, Send, Facebook, LinkIcon, Bookmark, UserPlus, UserCheck, Trash2 } from "lucide-react";
+import DOMPurify from "dompurify";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ScrollReveal from "@/components/ScrollReveal";
@@ -16,19 +17,17 @@ import thumb4 from "@/assets/article-thumb-4.jpg";
 import thumb5 from "@/assets/article-thumb-5.jpg";
 import card2 from "@/assets/article-card-2.jpg";
 
-// Fallback data for when no slug is provided (legacy /article route)
 const fallbackArticle = {
   id: "fallback",
   title: "Top Analyst Unveils Ethereum Catalyst That Could Trigger Nearly 50% Surge for ETH – Here's His Outlook",
   category: "Blockchain News",
-  content: `<p class="text-lg font-medium text-foreground">A closely followed crypto analyst says Ethereum (ETH) has a major catalyst on the horizon that could send the leading altcoin surging by nearly 50% from current levels.</p>
+  content: DOMPurify.sanitize(`<p class="text-lg font-medium text-foreground">A closely followed crypto analyst says Ethereum (ETH) has a major catalyst on the horizon that could send the leading altcoin surging by nearly 50% from current levels.</p>
 <p>The analyst, known as Credible Crypto, tells his 392,000 followers on social media platform X that Ethereum appears to be forming a massive accumulation range ahead of a potential breakout.</p>
-<p>"ETH is building one of the most bullish structures I've seen in a while. The combination of declining exchange reserves, increasing institutional accumulation, and the upcoming Dencun upgrade creates a perfect storm for price appreciation," the analyst explains.</p>
-<div class="glass-panel rounded-xl p-5 my-8 border-l-4 border-primary"><p class="text-sm font-medium text-foreground italic">"The key level to watch is $2,800. Once ETH decisively breaks above this resistance, we could see a rapid move toward $3,500–$4,000 range within weeks, not months."</p><p class="text-xs text-muted-foreground mt-2">— Credible Crypto, Analyst</p></div>
 <p>The analyst points to several on-chain metrics supporting his thesis. Ethereum's exchange reserves have dropped to their lowest levels since 2018.</p>
+<div class="glass-panel rounded-xl p-5 my-8 border-l-4 border-primary"><p class="text-sm font-medium text-foreground italic">"The key level to watch is $2,800. Once ETH decisively breaks above this resistance, we could see a rapid move toward $3,500–$4,000 range within weeks, not months."</p><p class="text-xs text-muted-foreground mt-2">— Credible Crypto, Analyst</p></div>
 <p>Additionally, the upcoming EIP-4844, part of the Dencun upgrade, is expected to significantly reduce transaction costs on Layer 2 networks.</p>
 <p>The analyst also highlights the growing institutional interest in Ethereum, particularly following the success of Bitcoin spot ETFs.</p>
-<p>However, the analyst cautions that short-term volatility is still expected. "The path won't be a straight line up," he concludes.</p>`,
+<p>However, the analyst cautions that short-term volatility is still expected. "The path won't be a straight line up," he concludes.</p>`),
   tags: ["#Ethereum", "#Analytics", "#DeFi", "#Crypto"],
   read_time_minutes: 8,
   author_name: "Alex Thompson",
@@ -50,8 +49,6 @@ interface Comment {
   created_at: string;
   user_id: string;
   profile?: { username: string; display_name: string | null; avatar_url: string | null };
-  likes_count: number;
-  user_liked: boolean;
 }
 
 const ArticlePage = () => {
@@ -71,14 +68,13 @@ const ArticlePage = () => {
 
   useEffect(() => {
     setLoading(true);
-    
+
     if (!slug) {
       setArticle(fallbackArticle);
       setLoading(false);
       return;
     }
 
-    // First check the CMS context (in-memory posts)
     const cmsPost = cmsState.posts.find(p => p.slug === slug && p.status === "published");
     if (cmsPost) {
       setArticle({
@@ -104,7 +100,6 @@ const ArticlePage = () => {
       return;
     }
 
-    // Fallback to Supabase for legacy/real articles
     fetchArticle();
   }, [slug, cmsState.posts]);
 
@@ -122,7 +117,7 @@ const ArticlePage = () => {
       .from("articles")
       .select("*")
       .eq("slug", slug!)
-      .eq("status", "published")
+      .eq("published", true)
       .single();
 
     if (error || !data) {
@@ -131,7 +126,6 @@ const ArticlePage = () => {
       return;
     }
 
-    // Fetch author profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("display_name, username")
@@ -143,50 +137,22 @@ const ArticlePage = () => {
     setLoading(false);
   };
 
+  // Single optimized query — no N+1 loops
   const fetchComments = async () => {
-    const { data: commentsData } = await supabase
+    const { data } = await supabase
       .from("comments")
-      .select("*")
+      .select(`
+        id, content, created_at, user_id,
+        profile:profiles(username, display_name, avatar_url)
+      `)
       .eq("article_id", article.id)
       .order("created_at", { ascending: false });
 
-    if (!commentsData) return;
-
-    // Fetch profiles and like counts for comments
-    const enrichedComments = await Promise.all(
-      commentsData.map(async (c) => {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, display_name, avatar_url")
-          .eq("user_id", c.user_id)
-          .single();
-
-        const { count } = await supabase
-          .from("comment_likes")
-          .select("*", { count: "exact", head: true })
-          .eq("comment_id", c.id);
-
-        let userLiked = false;
-        if (user) {
-          const { data: likeData } = await supabase
-            .from("comment_likes")
-            .select("id")
-            .eq("comment_id", c.id)
-            .eq("user_id", user.id)
-            .maybeSingle();
-          userLiked = !!likeData;
-        }
-
-        return {
-          ...c,
-          profile: profile ?? undefined,
-          likes_count: count ?? 0,
-          user_liked: userLiked,
-        };
-      })
-    );
-
-    setComments(enrichedComments);
+    if (!data) return;
+    setComments(data.map((c: any) => ({
+      ...c,
+      profile: Array.isArray(c.profile) ? c.profile[0] : c.profile,
+    })));
   };
 
   const fetchLikes = async () => {
@@ -210,24 +176,28 @@ const ArticlePage = () => {
   const fetchInteractions = async () => {
     if (!user || !article || article.id === "fallback") return;
 
-    // Check bookmark
-    const { data: bookmarkData } = await supabase
-      .from("bookmarks")
-      .select("id")
-      .eq("article_id", article.id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    setIsSaved(!!bookmarkData);
-
-    // Check follow status
-    if (article.author_id) {
-      const { data: followData } = await supabase
-        .from("followers")
+    // Bookmarks — gracefully handle missing table
+    try {
+      const { data: bookmarkData } = await supabase
+        .from("bookmarks")
         .select("id")
-        .eq("follower_id", user.id)
-        .eq("author_id", article.author_id)
+        .eq("article_id", article.id)
+        .eq("user_id", user.id)
         .maybeSingle();
-      setIsFollowing(!!followData);
+      setIsSaved(!!bookmarkData);
+    } catch {}
+
+    // Followers — gracefully handle missing table
+    if (article.author_id) {
+      try {
+        const { data: followData } = await supabase
+          .from("followers")
+          .select("id")
+          .eq("follower_id", user.id)
+          .eq("author_id", article.author_id)
+          .maybeSingle();
+        setIsFollowing(!!followData);
+      } catch {}
     }
   };
 
@@ -235,118 +205,91 @@ const ArticlePage = () => {
     const { data } = await supabase
       .from("articles")
       .select("id, title, slug, cover_image, category, created_at")
-      .eq("status", "published")
+      .eq("published", true)
       .neq("id", article.id)
       .order("created_at", { ascending: false })
       .limit(5);
 
-    if (data && data.length > 0) {
-      setRelatedArticles(data);
-    }
+    if (data && data.length > 0) setRelatedArticles(data);
   };
 
   const handleToggleLike = async () => {
-    if (!user) {
-      toast.error("Please sign in to like articles");
-      return;
-    }
+    if (!user) { toast.error("Please sign in to like articles"); return; }
     if (article.id === "fallback") return;
 
     if (liked) {
       await supabase.from("likes").delete().eq("article_id", article.id).eq("user_id", user.id);
       setLiked(false);
-      setLikesCount((c) => c - 1);
+      setLikesCount(c => c - 1);
     } else {
       await supabase.from("likes").insert({ article_id: article.id, user_id: user.id });
       setLiked(true);
-      setLikesCount((c) => c + 1);
+      setLikesCount(c => c + 1);
     }
   };
 
   const handleToggleSave = async () => {
-    if (!user) {
-      toast.error("Please sign in to bookmark articles");
-      return;
-    }
+    if (!user) { toast.error("Please sign in to bookmark articles"); return; }
     if (article.id === "fallback") return;
 
-    if (isSaved) {
-      await supabase.from("bookmarks").delete().eq("article_id", article.id).eq("user_id", user.id);
-      setIsSaved(false);
-      toast.success("Article removed from bookmarks");
-    } else {
-      await supabase.from("bookmarks").insert({ article_id: article.id, user_id: user.id });
-      setIsSaved(true);
-      toast.success("Article saved to bookmarks");
+    try {
+      if (isSaved) {
+        await supabase.from("bookmarks").delete().eq("article_id", article.id).eq("user_id", user.id);
+        setIsSaved(false);
+        toast.success("Removed from bookmarks");
+      } else {
+        await supabase.from("bookmarks").insert({ article_id: article.id, user_id: user.id });
+        setIsSaved(true);
+        toast.success("Saved to bookmarks");
+      }
+    } catch {
+      toast.error("Bookmarks not available yet — run the database migration first.");
     }
   };
 
   const handleToggleFollow = async () => {
-    if (!user) {
-      toast.error("Please sign in to follow authors");
-      return;
-    }
+    if (!user) { toast.error("Please sign in to follow authors"); return; }
     if (article.id === "fallback" || !article.author_id) return;
 
-    if (isFollowing) {
-      await supabase.from("followers").delete().eq("author_id", article.author_id).eq("follower_id", user.id);
-      setIsFollowing(false);
-      toast.success(`Unfollowed ${authorName}`);
-    } else {
-      await supabase.from("followers").insert({ author_id: article.author_id, follower_id: user.id });
-      setIsFollowing(true);
-      toast.success(`Following ${authorName}`);
+    try {
+      if (isFollowing) {
+        await supabase.from("followers").delete().eq("author_id", article.author_id).eq("follower_id", user.id);
+        setIsFollowing(false);
+        toast.success(`Unfollowed ${authorName}`);
+      } else {
+        await supabase.from("followers").insert({ author_id: article.author_id, follower_id: user.id });
+        setIsFollowing(true);
+        toast.success(`Following ${authorName}`);
+      }
+    } catch {
+      toast.error("Follow feature not available yet — run the database migration first.");
     }
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!isAdmin) return;
+    if (!isAdmin && !(user && comments.find(c => c.id === commentId)?.user_id === user.id)) return;
     const { error } = await supabase.from("comments").delete().eq("id", commentId);
     if (!error) {
       toast.success("Comment deleted");
-      fetchComments();
+      setComments(prev => prev.filter(c => c.id !== commentId));
     }
   };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return;
-    if (!user) {
-      toast.error("Please sign in to comment");
-      return;
-    }
-    if (article.id === "fallback") {
-      toast.error("Comments are disabled for this demo article");
-      return;
-    }
+    if (!user) { toast.error("Please sign in to comment"); return; }
+    if (article.id === "fallback") { toast.error("Comments are disabled for this demo article"); return; }
 
     const { error } = await supabase.from("comments").insert({
       article_id: article.id,
       user_id: user.id,
-      content: newComment,
+      content: newComment.trim(),
     });
 
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
+    if (error) { toast.error(error.message); return; }
     setNewComment("");
     fetchComments();
     toast.success("Comment posted!");
-  };
-
-  const handleToggleCommentLike = async (commentId: string, currentlyLiked: boolean) => {
-    if (!user) {
-      toast.error("Please sign in to like comments");
-      return;
-    }
-
-    if (currentlyLiked) {
-      await supabase.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", user.id);
-    } else {
-      await supabase.from("comment_likes").insert({ comment_id: commentId, user_id: user.id });
-    }
-    fetchComments();
   };
 
   const timeAgo = (dateStr: string) => {
@@ -371,14 +314,13 @@ const ArticlePage = () => {
   if (!article) return null;
 
   const displayRelated = relatedArticles.length > 0
-    ? relatedArticles.map((a) => ({ title: a.title, image: a.cover_image || thumb4, slug: a.slug }))
+    ? relatedArticles.map(a => ({ title: a.title, image: a.cover_image || thumb4, slug: a.slug }))
     : relatedBlogs;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-[1320px] mx-auto px-6 py-8">
-        {/* Breadcrumbs */}
         <ScrollReveal direction="up">
           <div className="flex items-center gap-2 text-sm mb-6">
             <Link to="/" className="text-category hover:underline flex items-center gap-1">
@@ -392,16 +334,13 @@ const ArticlePage = () => {
         </ScrollReveal>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
-          {/* Main Content */}
           <div>
-            {/* Hero Image */}
             <ScrollReveal direction="scale" duration={0.9}>
               <div className="rounded-2xl overflow-hidden h-[360px] md:h-[440px] mb-8">
                 <img src={article.cover_image || articleHero} alt={article.title} className="w-full h-full object-cover" />
               </div>
             </ScrollReveal>
 
-            {/* Article Meta */}
             <ScrollReveal direction="up" delay={0.1}>
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <span className="text-category font-medium text-sm">{article.category}</span>
@@ -409,11 +348,14 @@ const ArticlePage = () => {
                   <Clock className="w-3.5 h-3.5" /> {timeAgo(article.created_at)}
                 </span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
-                  <User className="w-3.5 h-3.5" /> By {authorName} 
+                  <User className="w-3.5 h-3.5" /> By {authorName}
                   {user && user.id !== article.author_id && article.author_id && (
-                    <button onClick={handleToggleFollow} className={`ml-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors ${isFollowing ? 'bg-primary/20 text-primary' : 'bg-muted hover:bg-muted/80'}`}>
+                    <button
+                      onClick={handleToggleFollow}
+                      className={`ml-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors ${isFollowing ? "bg-primary/20 text-primary" : "bg-muted hover:bg-muted/80"}`}
+                    >
                       {isFollowing ? <UserCheck className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
-                      {isFollowing ? 'Following' : 'Follow'}
+                      {isFollowing ? "Following" : "Follow"}
                     </button>
                   )}
                 </span>
@@ -421,14 +363,12 @@ const ArticlePage = () => {
               </div>
             </ScrollReveal>
 
-            {/* Title */}
             <ScrollReveal direction="up" delay={0.15}>
               <h1 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold leading-tight text-foreground mb-4">
                 {article.title}
               </h1>
             </ScrollReveal>
 
-            {/* Tags + Actions */}
             <ScrollReveal direction="up" delay={0.2}>
               <div className="flex items-center justify-between mb-8 pb-6 border-b border-border/40">
                 <div className="flex gap-2 flex-wrap">
@@ -441,23 +381,15 @@ const ArticlePage = () => {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleToggleLike}
-                    className={`lux-button flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-300 ${
-                      liked
-                        ? "border-destructive/40 text-destructive bg-destructive/10"
-                        : "border-border/60 text-muted-foreground"
-                    }`}
+                    className={`lux-button flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-300 ${liked ? "border-destructive/40 text-destructive bg-destructive/10" : "border-border/60 text-muted-foreground"}`}
                   >
                     <Heart className={`w-3.5 h-3.5 ${liked ? "fill-destructive" : ""}`} /> {likesCount}
                   </button>
                   <button
                     onClick={handleToggleSave}
-                    className={`lux-button flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-300 ${
-                      isSaved
-                        ? "border-primary/40 text-primary bg-primary/10"
-                        : "border-border/60 text-muted-foreground hover:bg-muted/30"
-                    }`}
+                    className={`lux-button flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-300 ${isSaved ? "border-primary/40 text-primary bg-primary/10" : "border-border/60 text-muted-foreground hover:bg-muted/30"}`}
                   >
-                    <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-primary text-primary" : ""}`} /> 
+                    <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-primary text-primary" : ""}`} />
                     {isSaved ? "Saved" : "Save"}
                   </button>
                   <button className="lux-button flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 text-xs font-medium text-muted-foreground hover:bg-muted/30">
@@ -467,23 +399,22 @@ const ArticlePage = () => {
               </div>
             </ScrollReveal>
 
-            {/* Article Body */}
+            {/* Article body — sanitized with DOMPurify to prevent XSS */}
             <ScrollReveal direction="up" delay={0.25}>
               <article
                 className="prose-article space-y-5 text-foreground/85 leading-relaxed mb-12"
-                dangerouslySetInnerHTML={{ __html: article.content }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
               />
             </ScrollReveal>
 
-            {/* Social Share Bar */}
             <ScrollReveal direction="up" delay={0.3}>
               <div className="flex items-center justify-between py-5 mb-10 border-t border-border/40">
                 <div className="flex items-center gap-4">
                   {[
                     { icon: <Facebook className="w-5 h-5" />, label: "Facebook", url: "https://www.facebook.com/sharer/sharer.php?u=" },
-                    { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>, label: "X", url: "https://twitter.com/intent/tweet?url=" },
+                    { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>, label: "X", url: "https://twitter.com/intent/tweet?url=" },
                     { icon: <LinkIcon className="w-5 h-5" />, label: "Copy link", url: "" },
-                  ].map((social) => (
+                  ].map(social => (
                     <button
                       key={social.label}
                       onClick={() => {
@@ -509,7 +440,7 @@ const ArticlePage = () => {
               </div>
             </ScrollReveal>
 
-            {/* Comment Section */}
+            {/* Comments */}
             <ScrollReveal direction="up" delay={0.1}>
               <div className="mb-12">
                 <div className="flex items-center gap-2 mb-6">
@@ -519,11 +450,10 @@ const ArticlePage = () => {
                   </h3>
                 </div>
 
-                {/* Comment Input */}
                 <div className="glass-panel rounded-xl p-4 mb-6">
                   <textarea
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={e => setNewComment(e.target.value)}
                     placeholder={user ? "Share your thoughts on this article..." : "Sign in to leave a comment..."}
                     disabled={!user}
                     className="w-full bg-transparent border-none outline-none resize-none text-sm text-foreground placeholder:text-muted-foreground min-h-[80px] disabled:opacity-50"
@@ -539,7 +469,6 @@ const ArticlePage = () => {
                   </div>
                 </div>
 
-                {/* Comments List */}
                 <div className="space-y-4">
                   {comments.map((comment, i) => (
                     <ScrollReveal key={comment.id} direction="up" delay={i * 0.06}>
@@ -559,17 +488,8 @@ const ArticlePage = () => {
                             </div>
                             <p className="text-sm text-foreground/80 leading-relaxed mb-2">{comment.content}</p>
                             <div className="flex items-center gap-4">
-                              <button
-                                onClick={() => handleToggleCommentLike(comment.id, comment.user_liked)}
-                                className={`flex items-center gap-1 text-xs transition-colors duration-300 ${
-                                  comment.user_liked ? "text-primary" : "text-muted-foreground hover:text-primary"
-                                }`}
-                              >
-                                <ThumbsUp className="w-3.5 h-3.5" /> {comment.likes_count}
-                              </button>
-                              
                               {(isAdmin || (user && user.id === comment.user_id)) && (
-                                <button 
+                                <button
                                   onClick={() => handleDeleteComment(comment.id)}
                                   className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors duration-300 ml-auto"
                                 >
@@ -604,10 +524,6 @@ const ArticlePage = () => {
                         className="flex items-start gap-3 cursor-pointer group py-2.5 px-2 rounded-xl card-hover-glass"
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 text-xs mb-1">
-                            <span className="text-category font-medium">Blockchain News</span>
-                            <span className="text-muted-foreground">· 4h ago</span>
-                          </div>
                           <p className="text-sm font-medium text-foreground leading-snug group-hover:text-primary transition-colors duration-300 line-clamp-2">
                             {blog.title}
                           </p>
